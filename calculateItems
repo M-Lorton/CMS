@@ -1,0 +1,47 @@
+// Calculates the total items scheduled across all rows using each row's own start and end dates.
+// The start date and end date for each row are taken from columns A & B.
+// Scheduled daily values for Mon-Sun are in columns E–K (indices 4–10).
+function calculateTotalItems() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Schedule");
+  
+  // Get the data range starting from row 13.
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  var dataRange = sheet.getRange(13, 1, lastRow - 12, lastCol);
+  var data = dataRange.getValues();
+  
+  var total = 0;
+  
+  // Mapping: JavaScript getDay() returns:
+  // 0 = Sunday, 1 = Monday, …, 6 = Saturday.
+  // Our columns: E (index 4)=Mon, F (5)=Tue, G (6)=Wed, H (7)=Thu, I (8)=Fri, J (9)=Sat, K (10)=Sun.
+  var dayMapping = {0: 10, 1: 4, 2: 5, 3: 6, 4: 7, 5: 8, 6: 9};
+  
+  // Iterate over each row from row 13 onward.
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    
+    // Skip if the start or end date is missing.
+    if (!row[0] || !row[1]) continue;
+    
+    // Parse the start and end dates from columns A and B.
+    var rowStart = parseMMDDYYYY(row[0]);
+    var rowEnd = parseMMDDYYYY(row[1]);
+    if (!rowStart || !rowEnd) continue;
+    
+    // Loop through each day in the row's date range.
+    for (var d = new Date(rowStart); d <= rowEnd; d.setDate(d.getDate() + 1)) {
+      var dayOfWeek = d.getDay();              // 0 (Sun) to 6 (Sat)
+      var colIndex = dayMapping[dayOfWeek];      // Corresponding column index in the row.
+      // If the cell is empty or not a number, treat it as 0.
+      var items = Number(row[colIndex]) || 0;
+      total += items;
+    }
+  }
+  
+  // Write the total into cell I6.
+  sheet.getRange("I6").setValue(total);
+  
+  return total;
+}
