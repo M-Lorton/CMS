@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 15px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+      }
+      th, td {
+        padding: 8px;
+        text-align: center;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      input[type="date"],
+      input[type="time"],
+      input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 5px;
+      }
+      .btn {
+        padding: 10px 20px;
+        font-size: 1em;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Add Orderline</h3>
+    <form id="orderlineForm">
+      <table>
+        <!-- Row for Start Date and End Date -->
+        <tr>
+          <td><label>Start Date:</label></td>
+          <td><input type="date" name="startDate" required></td>
+          <td><label>End Date:</label></td>
+          <td><input type="date" name="endDate" required></td>
+        </tr>
+        <!-- Row for Earliest and Latest Time -->
+        <tr>
+          <td><label>Earliest Time (HH:MM:SS):</label></td>
+          <td><input type="time" name="earliestTime" step="1" required value="06:00:00"></td>
+          <td><label>Latest Time (HH:MM:SS):</label></td>
+          <td><input type="time" name="latestTime" step="1" required value="18:00:00"></td>
+        </tr>
+      </table>
+      
+      <table>
+        <!-- Header Row with Abbreviated Day Labels -->
+        <tr>
+          <th>Mon</th>
+          <th>Tue</th>
+          <th>Wed</th>
+          <th>Thu</th>
+          <th>Fri</th>
+          <th>Sat</th>
+          <th>Sun</th>
+        </tr>
+        <!-- Row with Input Fields for Each Day's Commercials -->
+        <tr>
+          <td><input type="number" name="monday" value="0" min="0" required></td>
+          <td><input type="number" name="tuesday" value="0" min="0" required></td>
+          <td><input type="number" name="wednesday" value="0" min="0" required></td>
+          <td><input type="number" name="thursday" value="0" min="0" required></td>
+          <td><input type="number" name="friday" value="0" min="0" required></td>
+          <td><input type="number" name="saturday" value="0" min="0" required></td>
+          <td><input type="number" name="sunday" value="0" min="0" required></td>
+        </tr>
+      </table>
+      <input type="button" class="btn" value="Submit" onclick="submitForm()">
+    </form>
+    
+    <script>
+  // This function gathers the form data and sends it to the server-side script.
+  function submitForm() {
+    var form = document.getElementById("orderlineForm");
+    var button = document.querySelector('.btn');
+    
+    // Disable the submit button and change its text to prevent duplicate submissions.
+    button.disabled = true;
+    button.value = "Submitting...";
+    
+    var formData = {
+      startDate: form.startDate.value,
+      endDate: form.endDate.value,
+      earliestTime: form.earliestTime.value,
+      latestTime: form.latestTime.value,
+      monday: form.monday.value,
+      tuesday: form.tuesday.value,
+      wednesday: form.wednesday.value,
+      thursday: form.thursday.value,
+      friday: form.friday.value,
+      saturday: form.saturday.value,
+      sunday: form.sunday.value
+    };
+    
+    // Call the server-side function addOrderLineFromForm and handle the response.
+    google.script.run
+      .withSuccessHandler(function(insertedRow) {
+        // Save the returned inserted row (order line row) to localStorage.
+        localStorage.setItem("orderLineRow", insertedRow);
+        // Launch the cart selection popup.
+        google.script.run.showFilteredPopup();
+        // Close the orderline form dialog.
+        google.script.host.close();
+      })
+      .withFailureHandler(function(error) {
+        alert("Error: " + error.message);
+        // Re-enable the button if there's an error.
+        button.disabled = false;
+        button.value = "Submit";
+      })
+      .addOrderLineFromForm(formData);
+  }
+</script>
+
+  </body>
+</html>
