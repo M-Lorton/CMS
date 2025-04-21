@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      .view { display: none; }
+      .active { display: block; }
+      .form-group { margin-bottom: 10px; }
+      label { display: block; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <!-- Schedule Form View -->
+    <div id="scheduleView" class="view active">
+      <h3>Add Orderline</h3>
+      <div class="form-group">
+        <label>Start Date:</label>
+        <input type="date" id="startDate">
+      </div>
+      <div class="form-group">
+        <label>End Date:</label>
+        <input type="date" id="endDate">
+      </div>
+      <div class="form-group">
+        <label>Monday:</label>
+        <input type="number" id="monday" value="0">
+      </div>
+      <!-- Add other day fields as needed -->
+
+      <button onclick="submitSchedule()">Submit & Choose Copy</button>
+    </div>
+
+    <!-- Copy Selection View -->
+    <div id="copyView" class="view">
+      <h3>Select Copy</h3>
+      <div id="copyTable">Loading copy table...</div>
+      <br>
+      <button onclick="backToSchedule()">⬅ Back to Schedule</button>
+    </div>
+
+    <script>
+      let insertedRow = null;
+      let formData = {};
+
+      function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+      }
+
+      function submitSchedule() {
+        formData = {
+          startDate: document.getElementById("startDate").value,
+          endDate: document.getElementById("endDate").value,
+          monday: document.getElementById("monday").value,
+          // Add other days here...
+        };
+
+        google.script.run.withSuccessHandler(function(rowNum) {
+          insertedRow = rowNum;
+          loadCopyTable();
+          showView("copyView");
+        }).insertOrderlineRow(formData);
+      }
+
+      function loadCopyTable() {
+        google.script.run.withSuccessHandler(function(html) {
+          document.getElementById("copyTable").innerHTML = html;
+
+          // Add click handlers to rows if needed
+          document.querySelectorAll("#copyTable tr").forEach(row => {
+            row.onclick = function() {
+              const cart = row.children[0].textContent; // Assuming first column is cart
+              assignCart(cart);
+            };
+          });
+        }).buildFilteredCopyTable();
+      }
+
+      function assignCart(cartValue) {
+        if (!insertedRow) return alert("No orderline row to assign!");
+        google.script.run.withSuccessHandler(function() {
+          alert("Cart assigned: " + cartValue);
+        }).setCartForOrderline(cartValue, insertedRow);
+      }
+
+      function backToSchedule() {
+        showView("scheduleView");
+
+        // Optional: restore formData
+        document.getElementById("startDate").value = formData.startDate;
+        document.getElementById("endDate").value = formData.endDate;
+        document.getElementById("monday").value = formData.monday;
+        // etc...
+      }
+    </script>
+  </body>
+</html>
