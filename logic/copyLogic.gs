@@ -1,3 +1,4 @@
+
 function buildFilteredCopyTable() {
 // --- Step 1: Open the external spreadsheet and access the "Copy" sheet ---
   var externalSpreadsheetId = "1SdIU-vNd1gI52RIQJBuBqJVEoG9MqP3BdTb2ICjsXo0";  // Replace with your actual ID
@@ -51,4 +52,21 @@ function buildFilteredCopyTable() {
 function processCart(cart) {
   Logger.log("Selected Cart: " + cart);
   return cart;
+}
+
+function finalizeCart() {
+  if (!formData || !formData.cart) {
+    alert("Please select a cart before submitting.");
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(rowNum) {
+      alert("Cart assigned and order submitted!");
+      google.script.host.close(); // Close the modal/dialog
+    })
+    .withFailureHandler(function(error) {
+      alert("Submission error: " + error.message);
+    })
+    .insertOrderlineRow(formData);
 }
