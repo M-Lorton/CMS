@@ -38,6 +38,13 @@
       .view.active {
         display: block;
       }
+      #copyTable tr:hover {
+      background-color: #f0f8ff;
+      cursor: pointer;
+      }
+      #copyTable tr.selected {
+      background-color: #cce5ff;
+      }
     </style>
   </head>
   <body>
@@ -94,8 +101,10 @@
     <div id="copyView" class="view">
       <h3>Select Copy</h3>
       <div id="copyTable">Loading copy table...</div>
-      <br>
-      <button onclick="backToSchedule()">⬅ Back to Schedule</button>
+        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+        <button onclick="backToSchedule()">⬅ Back to Schedule</button>
+        <button id="submitCartBtn" onclick="finalizeCart()" style="display: none;">✅ Submit Cart Selection</button>
+        </div>
     </div>
 
     <script>
@@ -109,64 +118,84 @@
 
       function submitSchedule() {
         const button = document.querySelector('.btn');
-        if (button) {
-          button.disabled = true;
-          button.textContent = "Submitting...";
-        }
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Loading Copies...";
+  }
 
-        formData = {
-          startDate: document.getElementById("startDate").value,
-          endDate: document.getElementById("endDate").value,
-          earliestTime: document.getElementById("earliestTime")?.value || "",
-          latestTime: document.getElementById("latestTime")?.value || "",
-          monday: document.getElementById("monday")?.value || "0",
-          tuesday: document.getElementById("tuesday")?.value || "0",
-          wednesday: document.getElementById("wednesday")?.value || "0",
-          thursday: document.getElementById("thursday")?.value || "0",
-          friday: document.getElementById("friday")?.value || "0",
-          saturday: document.getElementById("saturday")?.value || "0",
-          sunday: document.getElementById("sunday")?.value || "0"
-        };
+  // Collect the form data
+  formData = {
+    startDate: document.getElementById("startDate").value,
+    endDate: document.getElementById("endDate").value,
+    earliestTime: document.getElementById("earliestTime")?.value || "",
+    latestTime: document.getElementById("latestTime")?.value || "",
+    monday: document.getElementById("monday")?.value || "0",
+    tuesday: document.getElementById("tuesday")?.value || "0",
+    wednesday: document.getElementById("wednesday")?.value || "0",
+    thursday: document.getElementById("thursday")?.value || "0",
+    friday: document.getElementById("friday")?.value || "0",
+    saturday: document.getElementById("saturday")?.value || "0",
+    sunday: document.getElementById("sunday")?.value || "0"
+  };
 
-        google.script.run
-          .withSuccessHandler(function(rowNum) {
-            insertedRow = rowNum;
-            loadCopyTable();
-            showView("copyView");
-            if (button) {
-              button.disabled = false;
-              button.textContent = "Submit & Choose Copy";
-            }
-          })
-          .withFailureHandler(function(error) {
-            alert("Error: " + error.message);
-            if (button) {
-              button.disabled = false;
-              button.textContent = "Submit & Choose Copy";
-            }
-          })
-          .insertOrderlineRow(formData);
+  loadCopyTable(); // Show copy choices
+  showView("copyView");
+
+  if (button) {
+    button.disabled = false;
+    button.textContent = "Submit & Choose Copy";
+  }
       }
 
       function loadCopyTable() {
-        google.script.run.withSuccessHandler(function(html) {
-          document.getElementById("copyTable").innerHTML = html;
+  google.script.run.withSuccessHandler(function(html) {
+    document.getElementById("copyTable").innerHTML = html;
 
-          // Add click handlers to rows
-          document.querySelectorAll("#copyTable tr").forEach(row => {
-            row.onclick = function() {
-              const cart = row.children[0].textContent;
-              assignCart(cart);
-            };
-          });
-        }).buildFilteredCopyTable();
-      }
+    // Set up row click highlighting
+    document.querySelectorAll("#copyTable tr").forEach(row => {
+      row.style.cursor = "pointer";
+
+      row.addEventListener("click", () => {
+        // Clear previous selections
+        document.querySelectorAll("#copyTable tr").forEach(r => {
+          r.classList.remove("selected");
+          r.style.backgroundColor = "";
+        });
+
+        // Highlight selected row
+        row.classList.add("selected");
+        row.style.backgroundColor = "#cce5ff";
+
+        // Store the selected cart value (assume column 0 = cart)
+        formData.cart = row.children[0].textContent.trim();
+
+        // Enable submit button
+        const submitBtn = document.getElementById("submitCartBtn");
+        submitBtn.style.display = "inline-block";
+      });
+    });
+  }).withFailureHandler(function(error) {
+    document.getElementById("copyTable").innerHTML = "❌ Failed to load copy table: " + error.message;
+  }).buildFilteredCopyTable();
+}
+
+
 
       function assignCart(cartValue) {
-        if (!insertedRow) return alert("No orderline row to assign!");
-        google.script.run.withSuccessHandler(function() {
-          alert("Cart assigned: " + cartValue);
-        }).setCartForOrderline(cartValue, insertedRow);
+        if (!formData) return alert("Form data is missing!");
+  formData.cart = cartValue;  // Add selected copy to form data
+
+  // Submit to server with full form data
+  google.script.run
+    .withSuccessHandler(function(rowNum) {
+      alert("Order successfully submitted with cart: " + cartValue);
+      insertedRow = rowNum;
+      showView("scheduleView"); // or reset the form if you prefer
+    })
+    .withFailureHandler(function(error) {
+      alert("Submission error: " + error.message);
+    })
+    .insertOrderlineRow(formData);
       }
 
       function backToSchedule() {
