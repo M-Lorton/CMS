@@ -3,31 +3,91 @@
   <head>
     <base target="_top">
     <style>
-      .view { display: none; }
-      .active { display: block; }
-      .form-group { margin-bottom: 10px; }
-      label { display: block; font-weight: bold; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 15px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+      }
+      th, td {
+        padding: 8px;
+        text-align: center;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      input[type="date"],
+      input[type="time"],
+      input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 5px;
+      }
+      .btn {
+        padding: 10px 20px;
+        font-size: 1em;
+        margin-top: 10px;
+      }
+      .view {
+        display: none;
+      }
+      .view.active {
+        display: block;
+      }
     </style>
   </head>
   <body>
+
     <!-- Schedule Form View -->
     <div id="scheduleView" class="view active">
       <h3>Add Orderline</h3>
+
       <div class="form-group">
         <label>Start Date:</label>
         <input type="date" id="startDate">
       </div>
+
       <div class="form-group">
         <label>End Date:</label>
         <input type="date" id="endDate">
       </div>
-      <div class="form-group">
-        <label>Monday:</label>
-        <input type="number" id="monday" value="0">
-      </div>
-      <!-- Add other day fields as needed -->
 
-      <button onclick="submitSchedule()">Submit & Choose Copy</button>
+      <div class="form-group">
+        <label>Earliest Time:</label>
+        <input type="time" id="earliestTime">
+      </div>
+
+      <div class="form-group">
+        <label>Latest Time:</label>
+        <input type="time" id="latestTime">
+      </div>
+
+      <table>
+        <tr>
+          <th>Mon</th>
+          <th>Tue</th>
+          <th>Wed</th>
+          <th>Thu</th>
+          <th>Fri</th>
+          <th>Sat</th>
+          <th>Sun</th>
+        </tr>
+        <tr>
+          <td><input type="number" id="monday" name="monday" value="0" min="0" required></td>
+          <td><input type="number" id="tuesday" name="tuesday" value="0" min="0" required></td>
+          <td><input type="number" id="wednesday" name="wednesday" value="0" min="0" required></td>
+          <td><input type="number" id="thursday" name="thursday" value="0" min="0" required></td>
+          <td><input type="number" id="friday" name="friday" value="0" min="0" required></td>
+          <td><input type="number" id="saturday" name="saturday" value="0" min="0" required></td>
+          <td><input type="number" id="sunday" name="sunday" value="0" min="0" required></td>
+        </tr>
+      </table>
+
+      <button class="btn" onclick="submitSchedule()">Submit & Choose Copy</button>
     </div>
 
     <!-- Copy Selection View -->
@@ -48,28 +108,54 @@
       }
 
       function submitSchedule() {
+        const button = document.querySelector('.btn');
+        if (button) {
+          button.disabled = true;
+          button.textContent = "Submitting...";
+        }
+
         formData = {
           startDate: document.getElementById("startDate").value,
           endDate: document.getElementById("endDate").value,
-          monday: document.getElementById("monday").value,
-          // Add other days here...
+          earliestTime: document.getElementById("earliestTime")?.value || "",
+          latestTime: document.getElementById("latestTime")?.value || "",
+          monday: document.getElementById("monday")?.value || "0",
+          tuesday: document.getElementById("tuesday")?.value || "0",
+          wednesday: document.getElementById("wednesday")?.value || "0",
+          thursday: document.getElementById("thursday")?.value || "0",
+          friday: document.getElementById("friday")?.value || "0",
+          saturday: document.getElementById("saturday")?.value || "0",
+          sunday: document.getElementById("sunday")?.value || "0"
         };
 
-        google.script.run.withSuccessHandler(function(rowNum) {
-          insertedRow = rowNum;
-          loadCopyTable();
-          showView("copyView");
-        }).insertOrderlineRow(formData);
+        google.script.run
+          .withSuccessHandler(function(rowNum) {
+            insertedRow = rowNum;
+            loadCopyTable();
+            showView("copyView");
+            if (button) {
+              button.disabled = false;
+              button.textContent = "Submit & Choose Copy";
+            }
+          })
+          .withFailureHandler(function(error) {
+            alert("Error: " + error.message);
+            if (button) {
+              button.disabled = false;
+              button.textContent = "Submit & Choose Copy";
+            }
+          })
+          .insertOrderlineRow(formData);
       }
 
       function loadCopyTable() {
         google.script.run.withSuccessHandler(function(html) {
           document.getElementById("copyTable").innerHTML = html;
 
-          // Add click handlers to rows if needed
+          // Add click handlers to rows
           document.querySelectorAll("#copyTable tr").forEach(row => {
             row.onclick = function() {
-              const cart = row.children[0].textContent; // Assuming first column is cart
+              const cart = row.children[0].textContent;
               assignCart(cart);
             };
           });
@@ -85,12 +171,17 @@
 
       function backToSchedule() {
         showView("scheduleView");
-
-        // Optional: restore formData
-        document.getElementById("startDate").value = formData.startDate;
-        document.getElementById("endDate").value = formData.endDate;
-        document.getElementById("monday").value = formData.monday;
-        // etc...
+        document.getElementById("startDate").value = formData.startDate || "";
+        document.getElementById("endDate").value = formData.endDate || "";
+        document.getElementById("earliestTime").value = formData.earliestTime || "";
+        document.getElementById("latestTime").value = formData.latestTime || "";
+        document.getElementById("monday").value = formData.monday || "0";
+        document.getElementById("tuesday").value = formData.tuesday || "0";
+        document.getElementById("wednesday").value = formData.wednesday || "0";
+        document.getElementById("thursday").value = formData.thursday || "0";
+        document.getElementById("friday").value = formData.friday || "0";
+        document.getElementById("saturday").value = formData.saturday || "0";
+        document.getElementById("sunday").value = formData.sunday || "0";
       }
     </script>
   </body>
