@@ -1,52 +1,8 @@
-function addOrderLineFromForm(formData) {
-  var ss = SpreadsheetApp.openById('18YiL3YFLdo_xi_pcLBLqr_E9PqrxA4KnQGGpiWttmz4');
-  var sheet = ss.getSheetByName("Schedule");
-  
-  // Reformat dates and times.
-  var startDateFormatted = Helpers.formatDate(formData.startDate);
-  var endDateFormatted = Helpers.formatDate(formData.endDate);
-  var earliestTimeFormatted = Helpers.formatTime(formData.earliestTime);
-  var latestTimeFormatted = Helpers.formatTime(formData.latestTime);
-  
-  // Build the new row (Columns A–K).
-  var newRow = [
-    startDateFormatted,         // Column A: Start Date
-    endDateFormatted,           // Column B: End Date
-    earliestTimeFormatted,      // Column C: Earliest Time
-    latestTimeFormatted,        // Column D: Latest Time
-    Number(formData.monday),    // Column E (Mon)
-    Number(formData.tuesday),   // Column F (Tue)
-    Number(formData.wednesday), // Column G (Wed)
-    Number(formData.thursday),  // Column H (Thu)
-    Number(formData.friday),    // Column I (Fri)
-    Number(formData.saturday),  // Column J (Sat)
-    Number(formData.sunday)     // Column K (Sun)
-  ];
-  
-  // Calculate weekly sum and add as Column L.
-  var weeklySum = newRow.slice(4, 11).reduce(function(sum, value) {
-    return sum + value;
-  }, 0);
-  newRow.push(weeklySum); // Column L
-  
-  // Determine where to insert the new orderline row.
-  var tableStartRow = 13;
-  var insertRow = Helpers.getFirstEmptyRowInColumn(sheet, 1, tableStartRow);
-  
-  // Insert the new row.
-  sheet.getRange(insertRow, 1, 1, newRow.length).setValues([newRow]);
-  
-  Logger.log("Orderline added at row " + insertRow);
-  
-  // Return the inserted row number for later use.
-  return insertRow;
-}
-
 function insertOrderlineRow(data) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Schedule");
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Schedule"); // your corrected name
   const startRow = 13;
   const startCol = 1;
-  const maxCols = 12; // A to L now (added cart)
+  const maxCols = 15; // A–O
 
   const dataRange = sheet.getRange(startRow, startCol, sheet.getMaxRows() - startRow + 1, 1).getValues();
   let targetRow = startRow;
@@ -54,6 +10,18 @@ function insertOrderlineRow(data) {
     if (!dataRange[i][0]) break;
     targetRow++;
   }
+
+  // Parse and calculate weekly total
+  const weekdays = [
+    parseInt(data.monday) || 0,
+    parseInt(data.tuesday) || 0,
+    parseInt(data.wednesday) || 0,
+    parseInt(data.thursday) || 0,
+    parseInt(data.friday) || 0,
+    parseInt(data.saturday) || 0,
+    parseInt(data.sunday) || 0
+  ];
+  const weeklyTotal = weekdays.reduce((a, b) => a + b, 0);
 
   const row = [
     data.startDate,
@@ -67,10 +35,12 @@ function insertOrderlineRow(data) {
     data.friday,
     data.saturday,
     data.sunday,
-    data.cart || "" // New column L
+    weeklyTotal,         // Column L
+    data.cart || "",     // Column M
+    data.length || "",   // Column N
+    data.title || ""     // Column O
   ];
 
   sheet.getRange(targetRow, startCol, 1, maxCols).setValues([row]);
   return targetRow;
 }
-
