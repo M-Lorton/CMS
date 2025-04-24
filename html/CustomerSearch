@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    function searchCustomers() {
+      var query = document.getElementById("searchBox").value;
+      console.log("Search Query: ", query); // Debug log
+      google.script.run.withSuccessHandler(displayMatches).getCustomerMatches(query);
+    }
+
+    function displayMatches(matches) {
+      console.log("Received Matches: ", matches); // Debug log
+      var resultDiv = document.getElementById("results");
+      resultDiv.innerHTML = ""; // Clear old results
+
+      if (matches.length === 0) {
+        resultDiv.innerHTML = "<p>No results found</p>";
+        return;
+      }
+
+      matches.forEach(function(match) {
+        var button = document.createElement("button");
+        button.textContent = match;
+        button.style.display = "block";
+        button.onclick = function() {
+          google.script.run.selectCustomer(match);
+          google.script.host.close();
+        };
+        resultDiv.appendChild(button);
+        resultDiv.appendChild(document.createElement("br"));
+      });
+    }
+  </script>
+</head>
+<body>
+  <h3>Search Customers</h3>
+  <input type="text" id="searchBox" onkeyup="searchCustomers()" placeholder="Start typing...">
+  <div id="results"></div>
+</body>
+</html>
