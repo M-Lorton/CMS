@@ -1,40 +1,96 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <script>
-    function searchCustomers() {
-      var query = document.getElementById("searchBox").value;
-      console.log("Search Query: ", query); // Debug log
-      google.script.run.withSuccessHandler(displayMatches).getCustomerMatches(query);
-    }
+  <head>
+    <style>
+      #confirmation { display: none; margin-top: 1em; border: 1px solid #ccc; padding: 1em; }
+      #results button, #controls button { display: block; margin: 0.5em 0; }
+    </style>
+    <script>
+      let allCustomers = [];
 
-    function displayMatches(matches) {
-      console.log("Received Matches: ", matches); // Debug log
-      var resultDiv = document.getElementById("results");
-      resultDiv.innerHTML = ""; // Clear old results
-
-      if (matches.length === 0) {
-        resultDiv.innerHTML = "<p>No results found</p>";
-        return;
+      function initCustomerList() {
+        google.script.run
+          .withSuccessHandler(customers => {
+            allCustomers = customers;
+            displayMatches(customers);
+          })
+          .getAllCustomers();
       }
 
-      matches.forEach(function(match) {
-        var button = document.createElement("button");
-        button.textContent = match;
-        button.style.display = "block";
-        button.onclick = function() {
-          google.script.run.selectCustomer(match);
-          google.script.host.close();
+      function searchCustomers() {
+        const query = document.getElementById("searchBox").value.toLowerCase();
+        const filtered = allCustomers.filter(name =>
+          name.toLowerCase().includes(query)
+        );
+        displayMatches(filtered);
+      }
+
+      function displayMatches(matches) {
+        const resultDiv = document.getElementById("results");
+        resultDiv.innerHTML = "";
+        if (matches.length === 0) {
+          resultDiv.innerHTML = "<p>No results found</p>";
+          return;
+        }
+        matches.forEach(name => {
+          const btn = document.createElement("button");
+          btn.textContent = name;
+          btn.onclick = () => confirmCustomer(name);
+          resultDiv.appendChild(btn);
+        });
+      }
+
+      // Step 1: fetch the full record for confirmation
+      function confirmCustomer(name) {
+        google.script.run
+          .withSuccessHandler(showConfirmation)
+          .getCustomerDetails(name);
+      }
+
+      // Step 2: show the confirmation pane with details + action buttons
+      function showConfirmation(details) {
+        document.getElementById("results").style.display = "none";
+        document.getElementById("controls").style.display = "none";
+
+        const pane = document.getElementById("confirmation");
+        pane.innerHTML = `
+          <h4>Confirm Selection</h4>
+          <p><strong>Name:</strong> ${details.name}</p>
+          <p><strong>Cust ID:</strong> ${details.id}</p>
+          <p><strong>City/State/Zip:</strong> ${details.city}, ${details.state} ${details.zip}</p>
+          <p><strong>Contact:</strong> ${details.contact}</p>
+          <button id="submitBtn">Submit</button>
+          <button id="backBtn">Go Back</button>
+        `;
+        pane.style.display = "block";
+
+        document.getElementById("submitBtn").onclick = () => {
+          google.script.run
+            .withSuccessHandler(() => google.script.host.close())
+            .selectCustomer(details.name);
         };
-        resultDiv.appendChild(button);
-        resultDiv.appendChild(document.createElement("br"));
-      });
-    }
-  </script>
-</head>
-<body>
-  <h3>Search Customers</h3>
-  <input type="text" id="searchBox" onkeyup="searchCustomers()" placeholder="Start typing...">
-  <div id="results"></div>
-</body>
+        document.getElementById("backBtn").onclick = () => {
+          pane.style.display = "none";
+          document.getElementById("results").style.display = "";
+          document.getElementById("controls").style.display = "";
+        };
+      }
+
+      // Hook Add New Advertiser button
+      function addNewAdvertiser() {
+        google.script.run.openAddAdvertiserDialog();
+      }
+
+      window.onload = initCustomerList;
+    </script>
+  </head>
+  <body>
+    <h3>Search Customers</h3>
+    <div id="controls">
+      <button onclick="addNewAdvertiser()">+ Add New Advertiser</button>
+      <input type="text" id="searchBox" onkeyup="searchCustomers()" placeholder="Start typing...">
+    </div>
+    <div id="results"></div>
+    <div id="confirmation"></div>
+  </body>
 </html>
